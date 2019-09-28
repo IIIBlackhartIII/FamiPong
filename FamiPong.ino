@@ -49,9 +49,9 @@ void loop()
 
 /////CUSTOM FUNCTIONS/////
 
-void moveStepper(String motor, String motorDir)
+void moveStepper(String playerMotor, String motorDir)
 {
-  if (motor == "Player1"){
+  if (playerMotor == "Player1"){
     if (motorDir == "Forward"){
       stepperMotor1->step(numSteps, FORWARD, stepType); //#Steps, Direction, Step Type
     }
