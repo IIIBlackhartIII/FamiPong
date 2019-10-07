@@ -3,11 +3,13 @@
  Project     : FamiPong Domination  
  Author      : Jeffrey "Blackhart" Hepburn
  Description : Physical pong table for FamiLab's booth at MakerFaire Orlando 2019; paddles are driven by stepper motors on linear rails, scoring system run by IR break sensors.
+ Libraries: Adafruit Motor Shield V2 (https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library); AccelStepper (http://www.airspayce.com/mikem/arduino/AccelStepper/index.html)
 ******************************************************************/
 #include <Wire.h>
+#include <AccelStepper.h>
 #include <Adafruit_MotorShield.h>
 
-#define DEBUG false
+#define DEBUG true
 
 ///STEPPER MOTORS///
 //Motors are wired into the terminals Red, Yellow, (skip GND), Green, Grey (or Brown)
@@ -22,63 +24,87 @@ Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17
       "Microstep" is a method where the coils are PWM'd to create smooth motion between steps.
    */
 #define stepType DOUBLE
-#define numSteps 250
-#define StepperSpeed 500 //set stepper motors speed in RPM
+#define StepperSpeed 1500 //set stepper motors speed in RPM
+#define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
+
+//Define Single Step Functions for AccelStepper Use
+void forwardStepP1()
+{
+  stepperMotor1->onestep(FORWARD,stepType);
+}
+void backwardStepP1()
+{
+  stepperMotor1->onestep(BACKWARD,stepType);
+}
+void forwardStepP2()
+{
+  stepperMotor2->onestep(FORWARD,stepType);
+}
+void backwardStepP2()
+{
+  stepperMotor2->onestep(BACKWARD,stepType);
+}
+
+//Define Stepper Motors as AccelStepper Objects
+AccelStepper Astepper1(forwardStepP1, backwardStepP1); // use functions to step
+AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 
 ///CONTROLLERS///
 
 /* TODO defining microswitch inputs to go here */
 
+/* TODO adding end stop switch inputs to go here*/
+
+/*TODO Adding IR Break Beam Sensors to go here*/
+
+/*TODO Adding Neopixels to go here*/
+
+/*TODO Adding Voltmeter to go here*/
 
 void setup()
 {
   ///STEPPER MOTORS///
-  Serial.begin(9600);           // set up Serial library at 9600 bps
+  Serial.begin(19200); // set up Serial library at 19200 bps
   Serial.println("Stepper test!");
   
   AFMS.begin();  // create with the default frequency 1.6KHz
   Wire.setClock(400000); //set speed of I2C bus, increases rate of polling to stepper sheild
   
-  stepperMotor1->setSpeed(StepperSpeed); //set motor to run at defined speed
-  stepperMotor2->setSpeed(StepperSpeed); //set motor to run at defined speed
+  Astepper1.setMaxSpeed(StepperSpeed); //set max speed on Motor1
+  Astepper1.setAcceleration(StepperAccel); //set acceleration on Motor1
+  
+  Astepper2.setMaxSpeed(StepperSpeed); //set max speed on Motor2
+  Astepper2.setAcceleration(StepperAccel); //set acceleration on Motor2
+  
+  if (DEBUG == true){
+    //Test Movement Distance
+    Astepper1.moveTo(600);
+    Astepper2.moveTo(600);
+  }
 }
 
 
 void loop()
 {
+  ///STEPPER MOTORS///
 
-   ///STEPPER MOTORS///
-   
-   //Player1 Controller Input 
-   moveStepper("Player1","Forward"); 
-   delay(2000);
-   moveStepper("Player1","Backward"); 
-   delay(2000);
-   
-   //Player2 Controller Input
-   //moveStepper("Player2","Forward"); 
-   //moveStepper("Player2","Backward"); 
-}
+  //Player1 Controller Input
+  if (DEBUG == true){
+    TestMotorsMovement();
+  }
+    
+  //RUN EVERY LOOP, commands stepper motors to update//
+  Astepper1.run();
+  Astepper2.run();
+ }
 
 
 /////CUSTOM FUNCTIONS/////
 
-void moveStepper(String playerMotor, String motorDir)
+void TestMotorsMovement()
 {
-  if (playerMotor == "Player1"){
-    if (motorDir == "Forward"){
-      stepperMotor1->step(numSteps, FORWARD, stepType); //#Steps, Direction, Step Type
-    }
-    else{
-      stepperMotor1->step(numSteps, BACKWARD, stepType); //#Steps, Direction, Step Type
-    }
-  }
-  else{
-    if (motorDir == "Forward"){
-      stepperMotor2->step(numSteps, FORWARD, stepType); //#Steps, Direction, Step Type
-    }
-    else{
-      stepperMotor2->step(numSteps, BACKWARD, stepType); //#Steps, Direction, Step Type
-    }
-  }
+  if(Astepper1.distanceToGo() == 0)
+    Astepper1.moveTo(-Astepper1.currentPosition());
+  if(Astepper2.distanceToGo() == 0)
+    Astepper2.moveTo(-Astepper2.currentPosition());
 }
