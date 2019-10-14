@@ -21,16 +21,16 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield(); //create stepper motor objec
 Adafruit_StepperMotor *stepperMotor1 = AFMS.getStepper(200,1); //Player 1 Nema17 motor, 200 steps per revolution, connected to Port1 (terminals M1+M2)
 Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17 motor, 200 steps per revolution, connected to Port1 (terminals M3+M4)
 /*
-   Step types are "SINGLE", "DOUBLE", "INTERLEAVE", or "MICROSTEP":
-      "Single" means single-coil activation
-      "Double" means 2 coils are activated at once (for higher torque)
-      "Interleave" means that it alternates between single and double to get twice the resolution (but of course its half the speed).
-      "Microstep" is a method where the coils are PWM'd to create smooth motion between steps.
-   */
+   -Step types are "SINGLE", "DOUBLE", "INTERLEAVE", or "MICROSTEP":
+      -"Single" means single-coil activation
+      -"Double" means 2 coils are activated at once (for higher torque)
+      -"Interleave" means that it alternates between single and double to get twice the resolution (but of course its half the speed).
+      -"Microstep" is a method where the coils are PWM'd to create smooth motion between steps.
+*/
 #define stepType DOUBLE
 #define StepperSpeed 3500 //set stepper motors speed in RPM
 #define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
-#define PaddleDist 2000 //movement target for left/right
+#define PaddleDist 7500 //movement target for left/right
 
 //Define Single Step Functions for AccelStepper Use
 void forwardStepP1()
@@ -54,6 +54,8 @@ void backwardStepP2()
 AccelStepper Astepper1(forwardStepP1, backwardStepP1); // use functions to step
 AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 /******************************************************************/
+
+
 
 ///JOYSTICKS///
 /******************************************************************/
@@ -92,7 +94,6 @@ int MovementChecked = 0;
 void setup()
 {
   ///STEPPER MOTORS///
-  
   Serial.begin(19200); // set up Serial library at 19200 bps
   Serial.println("Stepper test!");
   
@@ -113,7 +114,6 @@ void setup()
   }
   
   ///JOYSTICKS///
-  
   pinMode(Player1Up,INPUT_PULLUP);
   pinMode(Player1Down,INPUT_PULLUP);
   
@@ -130,6 +130,7 @@ void loop()
   
   if (BootSequenceTestRun == true){
     //Player1 Controller Input
+    //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
     if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
       Astepper1.moveTo(PaddleDist);
     } 
@@ -142,6 +143,7 @@ void loop()
 
 
     //Player2 Controller Input
+    //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
     if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
       Astepper2.moveTo(PaddleDist);
     } 
@@ -153,7 +155,6 @@ void loop()
     }
   }
 
-    
   //RUN EVERY LOOP, commands stepper motors to update//
   Astepper1.run();
   Astepper2.run();
