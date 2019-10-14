@@ -30,7 +30,7 @@ Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17
 #define stepType DOUBLE
 #define StepperSpeed 3500 //set stepper motors speed in RPM
 #define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
-#define PaddleMaxDist 850 //software end limits for the paddles
+#define PaddleDist 2000 //movement target for left/right
 
 //Define Single Step Functions for AccelStepper Use
 void forwardStepP1()
@@ -105,6 +105,13 @@ void setup()
   Astepper2.setMaxSpeed(StepperSpeed); //set max speed on Motor2
   Astepper2.setAcceleration(StepperAccel); //set acceleration on Motor2
   
+  //Prime test sequence
+  if (BootSequenceTestRun == false){
+    //Test Movement Distance
+    Astepper1.moveTo(600);
+    Astepper2.moveTo(600);
+  }
+  
   ///JOYSTICKS///
   
   pinMode(Player1Up,INPUT_PULLUP);
@@ -117,41 +124,35 @@ void setup()
 
 void loop()
 {
-
   if (BootSequenceTestRun == false){
-    //Test Movement Distance
-    Astepper1.moveTo(PaddleMaxDist);
-    Astepper2.moveTo(PaddleMaxDist);
-    
     TestMotorsMovement();
-    
-    if (MovementChecked >= 4){
-      BootSequenceTestRun = true;
-    }
-  } else {
+  } 
+  
+  if (BootSequenceTestRun == true){
     //Player1 Controller Input
     if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
-      Astepper1.moveTo(PaddleMaxDist);
+      Astepper1.moveTo(PaddleDist);
     } 
     else if (digitalRead(Player1Down) == LOW && digitalRead(Player1Up) == HIGH){
-      Astepper1.moveTo(-PaddleMaxDist);
+      Astepper1.moveTo(-PaddleDist);
     }
     else {
       Astepper1.moveTo(Astepper1.currentPosition());
     }
-    
-    
+
+
     //Player2 Controller Input
     if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
-      Astepper2.moveTo(PaddleMaxDist);
+      Astepper2.moveTo(PaddleDist);
     } 
     else if (digitalRead(Player2Down) == LOW && digitalRead(Player2Up) == HIGH){
-      Astepper2.moveTo(-PaddleMaxDist);
+      Astepper2.moveTo(-PaddleDist);
     }
     else {
       Astepper2.moveTo(Astepper2.currentPosition());
     }
   }
+
     
   //RUN EVERY LOOP, commands stepper motors to update//
   Astepper1.run();
@@ -163,10 +164,14 @@ void loop()
 
 void TestMotorsMovement()
 {
-  if(Astepper1.distanceToGo() == 0)
+  if(Astepper1.distanceToGo() <= 0)
     Astepper1.moveTo(-Astepper1.currentPosition());
     MovementChecked += 1;
-  if(Astepper2.distanceToGo() == 0)
+  if(Astepper2.distanceToGo() <= 0)
     Astepper2.moveTo(-Astepper2.currentPosition());
     MovementChecked += 1;
+    
+  if (MovementChecked >= 4){
+    BootSequenceTestRun = true;
+  }
 }
