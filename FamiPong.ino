@@ -212,6 +212,8 @@ void loop()
   CheckScoring();
   VoltScoreDisplay();
   
+  
+  //Check Victory Condition
   if (abs(Player1Score - Player2Score) >= 3){
     if (Player1Score > Player2Score){
       Serial.println("Player 1 Wins!");
