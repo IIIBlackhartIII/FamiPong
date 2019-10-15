@@ -53,6 +53,10 @@ void backwardStepP2()
 //Define Stepper Motors as AccelStepper Objects
 AccelStepper Astepper1(forwardStepP1, backwardStepP1); // use functions to step
 AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
+
+// Motor check startup sequence variables
+bool BootSequenceTestRun = false;
+int MovementChecked = 0;
 /******************************************************************/
 
 
@@ -80,16 +84,32 @@ AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 /******************************************************************/
 
 
-/* TODO adding end stop switch inputs to go here*/
+/* TODO adding end stop limit switch inputs to go here*/
 
-/*TODO Adding IR Break Beam Sensors to go here*/
+///IR BREAK BEAM SENSORS///
+/******************************************************************/
+//Break Beams are mounted at the end of the board, after the solenoid rails, and are used to detect the ball falling into the trough
+
+//Digital Pins
+#define Player1SensorPin 26 //Player 1 Break Beam 
+#define Player2SensorPin 48 //Player 2 Break Beam
+
+//Scoring State Variables
+bool canScore = true;
+
+int P1SensorState = 0, P2SensorState = 0;
+
+unsigned long resetTimer = 0; //when was the score last triggered
+#define resetDelayPeriod 5000; //how many milliseconds does the ball need to be taken out for before someone can score again)
+
+//Player Score Variables
+int Player1Score = 0, Player2Score = 0;
+/******************************************************************/
 
 /*TODO Adding Neopixels to go here*/
 
 /*TODO Adding Voltmeter to go here*/
 
-bool BootSequenceTestRun = false;
-int MovementChecked = 0;
 
 void setup()
 {
@@ -119,11 +139,20 @@ void setup()
   
   pinMode(Player2Up,INPUT_PULLUP);
   pinMode(Player2Down,INPUT_PULLUP);
+  
+  ///IR SENSORS///
+  pinMode(Player1SensorPin, INPUT); //init the sensor pin as input
+  digitalWrite(Player1SensorPin, HIGH); //turn on the pullup
+  
+  pinMode(Player2SensorPin, INPUT);  //init the sensor pin as input
+  digitalWrite(Player2SensorPin, HIGH); //turn on the pullup
 }
 
 
 void loop()
 {
+  ///MOTORS MOVEMENT///
+  /******************************************************************/
   if (BootSequenceTestRun == false){
     TestMotorsMovement();
   } 
@@ -158,10 +187,55 @@ void loop()
   //RUN EVERY LOOP, commands stepper motors to update//
   Astepper1.run();
   Astepper2.run();
+  /******************************************************************/
+  
+  
+  ///SCORING///
+  /******************************************************************/
+  CheckScoring();
+  
+  
+
+  
+  /******************************************************************/
 }
 
-
+/******************************************************************/
 /////CUSTOM FUNCTIONS/////
+/******************************************************************/
+void CheckScoring()
+{
+  //check sensors states
+  P1SensorState = digitalRead(Player1SensorPin); 
+  P2SensorState = digitalRead(Player2SensorPin);
+  
+  //check if a player scored, and can score
+  if (P1SensorState == LOW && canScore == true){
+    Player1Score += 1;
+    Serial.println("Player 1 Scored!");
+    Serial.println("Player 1's Score is now: " + Player1Score);
+    
+    canScore = false;
+  }
+  
+  if (P2SensorState == LOW && canScore == true){
+    Player2Score += 1;
+    Serial.println("Player 2 Scored!");
+    Serial.println("Player 2's Score is now: " + Player2Score);
+    
+    canScore = false;
+  }
+  
+  //once ball is removed, scoring is still locked. Set the reset timer to delay scoring
+  if (P1SensorState == HIGH && P2SensorState == HIGH && canScore == false){
+    resetTimer = millis();
+  }
+  
+  //once the current time is greater than the resetTime + the delay (how many seconds before its fair to score again) unlock scoring again
+  if (millis() > resetTimer + resetDelayPeriod){
+    canScore = true;
+  }
+}
 
 void TestMotorsMovement()
 {
