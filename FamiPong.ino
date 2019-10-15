@@ -3,11 +3,14 @@
  Project     : FamiPong Domination  
  Author      : Jeffrey "Blackhart" Hepburn
  Description : Physical pong table for FamiLab's booth at MakerFaire Orlando 2019; paddles are driven by stepper motors on linear rails, scoring system run by IR break sensors.
- Libraries: Adafruit Motor Shield V2 (https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library); AccelStepper (http://www.airspayce.com/mikem/arduino/AccelStepper/index.html)
+ Libraries: -Adafruit Motor Shield V2 (https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library); 
+            -AccelStepper (http://www.airspayce.com/mikem/arduino/AccelStepper/index.html);
+            -Adafruit Neopixel (https://github.com/adafruit/Adafruit_NeoPixel);
 ******************************************************************/
 #include <Wire.h>
 #include <AccelStepper.h>
 #include <Adafruit_MotorShield.h>
+#include <Adafruit_NeoPixel.h>
 
 #define DEBUG false
 
@@ -59,8 +62,6 @@ bool BootSequenceTestRun = false;
 int MovementChecked = 0;
 /******************************************************************/
 
-
-
 ///JOYSTICKS///
 /******************************************************************/
 //Adafruit Small Microswitch Joystick (Sanwa type)
@@ -83,8 +84,8 @@ int MovementChecked = 0;
 
 /******************************************************************/
 
-
 /* TODO adding end stop limit switch inputs to go here*/
+
 
 ///IR BREAK BEAM SENSORS///
 /******************************************************************/
@@ -106,9 +107,18 @@ unsigned long resetTimer = 0; //when was the score last triggered
 int Player1Score = 0, Player2Score = 0;
 /******************************************************************/
 
-/*TODO Adding Neopixels to go here*/
+///NEOPIXELS///
+/******************************************************************/
+#define LED_COUNT 60 //how many LEDs on strip
+#define brightness 0 //how bright the LED is
+#define fadeAmount 3 //how many points to fade the LED by
+#define Pixel_Pin 36 //NeoPixel strip data pin
 
-/*TODO Adding Voltmeter to go here*/
+Adafruit_NeoPixel strip(LED_COUNT, Pixel_Pin, NEO_GRB + NEO_KHZ800); //declare strip
+/******************************************************************/
+
+#define VoltDisplay 45 //define PWM pin for the Voltmeter
+int DisplayScore = 0;
 
 
 void setup()
@@ -146,6 +156,13 @@ void setup()
   
   pinMode(Player2SensorPin, INPUT);  //init the sensor pin as input
   digitalWrite(Player2SensorPin, HIGH); //turn on the pullup
+  
+  ///DISPLAYS///
+  pinMode(VoltDisplay,OUTPUT);
+  
+  strip.begin(); //INIT Neopixel strip object
+  strip.show(); //Turn off all pixels
+  strip.setBrightness(50);
 }
 
 
@@ -193,10 +210,23 @@ void loop()
   ///SCORING///
   /******************************************************************/
   CheckScoring();
+  VoltScoreDisplay();
   
-  
-
-  
+  if (abs(Player1Score - Player2Score) >= 3){
+    if (Player1Score > Player2Score){
+      Serial.println("Player 1 Wins!");
+      Serial.println("Player 1's Final Score Was: " + Player1Score);
+      VictoryDisplay(1);
+    }
+    else {
+      Serial.println("Player 2 Wins!");
+      Serial.println("Player 2's Final Score Was: " + Player2Score);
+      VictoryDisplay(2);
+    }
+    
+    Player1Score = 0;
+    Player2Score = 0;
+  }
   /******************************************************************/
 }
 
@@ -214,14 +244,15 @@ void CheckScoring()
     Player1Score += 1;
     Serial.println("Player 1 Scored!");
     Serial.println("Player 1's Score is now: " + Player1Score);
+    ScorePointDisplay(1);
     
     canScore = false;
   }
-  
-  if (P2SensorState == LOW && canScore == true){
+  else if (P2SensorState == LOW && canScore == true){
     Player2Score += 1;
     Serial.println("Player 2 Scored!");
     Serial.println("Player 2's Score is now: " + Player2Score);
+    ScorePointDisplay(2);
     
     canScore = false;
   }
@@ -233,7 +264,72 @@ void CheckScoring()
   
   //once the current time is greater than the resetTime + the delay (how many seconds before its fair to score again) unlock scoring again
   if (millis() > resetTimer + resetDelayPeriod){
-    canScore = true;
+    canScore = true; //allow scoring again
+    
+    strip.clear(); //reset neopixels
+    strip.show(); 
+  }
+}
+
+void ScorePointDisplay(int team)
+{
+  int i = 0;
+  strip.clear();
+  
+  if (team == 1){
+    for (i; i < LED_COUNT/2; i++){
+      // pixels.Color() takes RGB values, from 0,0,0 up to 255,255,255
+      // Here we're using a moderately bright green color:
+      strip.setPixelColor(i, strip.Color(0, 150, 0));
+      strip.show();   // Send the updated pixel colors to the hardware.
+    }
+  }
+  else {
+    i = LED_COUNT/2;
+    for(i; i<LED_COUNT; i++) { // For each pixel...
+      // pixels.Color() takes RGB values, from 0,0,0 up to 255,255,255
+      // Here we're using a moderately bright red color:
+      strip.setPixelColor(i, strip.Color(150, 0, 0));
+      strip.show();   // Send the updated pixel colors to the hardware.
+    }
+  }
+}
+
+void VoltScoreDisplay()
+{
+  DisplayScore = (Player1Score - Player2Score) + 3;
+  
+  //10Hz asynchronous update rate on Voltmeter
+  if (floor(millis()) % 100 == 0){
+    analogWrite(voltDisplay, 153*(0.166667*displayScore));
+  }
+}
+
+void VictoryDisplay (int team)
+{
+  int upperLimit = LED_COUNT; 
+  int lowerLimit = 0;
+  if (team == 1){
+    upperLimit = LED_COUNT/2;
+  }
+  else {
+    lowerLimit = LED_COUNT/2;
+  }
+  
+  for(long firstPixelHue = 0; firstPixelHue < 5*65536; firstPixelHue += 256) {
+    for(int i= lowerLimit; i<upperLimit; i++) { // For each pixel in strip...
+      // Offset pixel hue by an amount to make one full revolution of the
+      // color wheel (range of 65536) along the length of the strip
+      // (strip.numPixels() steps):
+      int pixelHue = firstPixelHue + (i * 65536L / strip.numPixels());
+      // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
+      // optionally add saturation and value (brightness) (each 0 to 255).
+      // Here we're using just the single-argument hue variant. The result
+      // is passed through strip.gamma32() to provide 'truer' colors
+      // before assigning to each pixel:
+      strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
+    }
+    strip.show(); // Update strip with new contents
   }
 }
 
