@@ -101,7 +101,7 @@ bool canScore = true;
 int P1SensorState = 0, P2SensorState = 0;
 
 unsigned long resetTimer = 0; //when was the score last triggered
-#define resetDelayPeriod 5000; //how many milliseconds does the ball need to be taken out for before someone can score again)
+#define resetDelay 5000 //how many milliseconds does the ball need to be taken out for before someone can score again)
 
 //Player Score Variables
 int Player1Score = 0, Player2Score = 0;
@@ -265,7 +265,7 @@ void CheckScoring()
   }
   
   //once the current time is greater than the resetTime + the delay (how many seconds before its fair to score again) unlock scoring again
-  if (millis() > resetTimer + resetDelayPeriod){
+  if (millis() > resetTimer + resetDelay){
     canScore = true; //allow scoring again
     
     strip.clear(); //reset neopixels
@@ -302,8 +302,8 @@ void VoltScoreDisplay()
   DisplayScore = (Player1Score - Player2Score) + 3;
   
   //10Hz asynchronous update rate on Voltmeter
-  if (floor(millis()) % 100 == 0){
-    analogWrite(voltDisplay, 153*(0.166667*displayScore));
+  if (millis() % 100 == 0){
+    analogWrite(VoltDisplay, 153*(0.166667*DisplayScore));
   }
 }
 
