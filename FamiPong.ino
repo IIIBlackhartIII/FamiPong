@@ -31,7 +31,7 @@ Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17
 #define stepType DOUBLE
 #define StepperSpeed 3500 //set stepper motors speed in RPM
 #define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
-#define PaddleDist 7500 //movement target for left/right
+#define PaddleDist 75000 //movement target for left/right
 
 //Define Single Step Functions for AccelStepper Use
 void forwardStepP1()
@@ -95,9 +95,9 @@ bool canScore = true;
 
 int P1SensorState = 0, P2SensorState = 0;
 
-unsigned long resetTimer = 0; //when was the score last triggered
+unsigned long resetTimer = 0; // timestamp when was the score last triggered
 bool resetWaiting  = false; //used to make sure the timer is only set once when ball removed
-#define resetDelay 5000L //how many milliseconds does the ball need to be taken out for before someone can score again)
+const long resetDelay = 5000; //how many milliseconds does the ball need to be taken out for before someone can score again
 
 //Player Score Variables
 int Player1Score = 0, Player2Score = 0;
@@ -125,10 +125,13 @@ void setup()
   
   AFMS.begin();  // create with the default frequency 1.6KHz
   Wire.setClock(400000L); //set speed of I2C bus, increases rate of polling to stepper sheild
+  TWBR = ((F_CPU /400000l) - 16) / 2; // Change the i2c clock to 400KHz
   
+  Astepper1.setSpeed(StepperSpeed); //set stepper const speed on Motor1
   Astepper1.setMaxSpeed(StepperSpeed); //set max speed on Motor1
   Astepper1.setAcceleration(StepperAccel); //set acceleration on Motor1
   
+  Astepper2.setSpeed(StepperSpeed); //set stepper const speed on Motor2
   Astepper2.setMaxSpeed(StepperSpeed); //set max speed on Motor2
   Astepper2.setAcceleration(StepperAccel); //set acceleration on Motor2
   
@@ -169,6 +172,7 @@ void loop()
   }
   else {
     Astepper1.moveTo(Astepper1.currentPosition());
+    stepperMotor1->release(); //release motor when not moving to prevent over heating
   }
 
 
@@ -182,6 +186,7 @@ void loop()
   }
   else {
     Astepper2.moveTo(Astepper2.currentPosition());
+    stepperMotor2->release(); //release motor when not moving to prevent over heating
   }
 
   //RUN EVERY LOOP, commands stepper motors to update//
@@ -251,7 +256,8 @@ void CheckScoring()
   }
   
   //once the current time is greater than the resetTime + the delay (how many seconds before its fair to score again) unlock scoring again
-  if (millis() > resetTimer + resetDelay){
+
+  if (millis() - resetTimer >= resetDelay && resetWaiting == true){
     canScore = true; //allow scoring again
     resetWaiting = false; //allow reset timer to be set next time
     strip.clear(); //reset neopixels
