@@ -31,18 +31,18 @@ Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17
 #define stepType DOUBLE
 #define StepperSpeed 3500 //set stepper motors speed in RPM
 #define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
-#define PaddleDist 75000 //movement target for left/right
+#define PaddleDist 10 //movement target for left/right
 bool Stepper1IsMoving = false; //keeps track of whether the stepper motor is moving or stopped
 bool Stepper2IsMoving = false; //keeps track of whether the stepper motor is moving or stopped
 
 //Define Step Functions for AccelStepper Use
 void forwardStepP1()
 {
-  stepperMotor1->onestep(FORWARD,stepType);
+  stepperMotor1->quickstep(FORWARD);
 }
 void backwardStepP1()
 {
-  stepperMotor1->onestep(BACKWARD,stepType);
+  stepperMotor1->quickstep(BACKWARD);
 }
 void forwardStepP2()
 {
@@ -172,11 +172,11 @@ void loop()
   //Player1 Controller Input
   //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
   if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
-    Astepper1.moveTo(PaddleDist);
+    Astepper1.move(PaddleDist);
     Stepper1IsMoving = true;
   } 
   else if (digitalRead(Player1Down) == LOW && digitalRead(Player1Up) == HIGH){
-    Astepper1.moveTo(-PaddleDist);
+    Astepper1.move(-PaddleDist);
     Stepper1IsMoving = true;
   }
   else {
@@ -189,11 +189,11 @@ void loop()
   //Player2 Controller Input
   //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
   if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
-    Astepper2.moveTo(PaddleDist);
+    Astepper2.move(PaddleDist);
     Stepper2IsMoving = true;
   } 
   else if (digitalRead(Player2Down) == LOW && digitalRead(Player2Up) == HIGH){
-    Astepper2.moveTo(-PaddleDist);
+    Astepper2.move(-PaddleDist);
     Stepper2IsMoving = true;
   }
   else {
@@ -204,12 +204,11 @@ void loop()
 
   //RUN EVERY LOOP, commands stepper motors to update//
   if (Stepper1IsMoving){
-    Astepper1.run();
+    Astepper1.runSpeed();
   }
   if (Stepper2IsMoving){
-    Astepper2.run();
+    Astepper2.runSpeed();
   }
-  
   /******************************************************************/
   
   
