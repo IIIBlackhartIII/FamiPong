@@ -126,7 +126,7 @@ void setup()
   Serial.println("Stepper test!");
   
   AFMS.begin();  // create with the default frequency 1.6KHz
-  Wire.setClock(500000L); //set speed of I2C bus, increases rate of polling to stepper sheild
+  Wire.setClock(400000L); //set speed of I2C bus, increases rate of polling to stepper sheild
   
   Astepper1.setSpeed(StepperSpeed); //set stepper const speed on Motor1
   Astepper1.setMaxSpeed(StepperSpeed); //set max speed on Motor1
