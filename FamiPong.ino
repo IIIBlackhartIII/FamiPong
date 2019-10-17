@@ -32,8 +32,10 @@ Adafruit_StepperMotor *stepperMotor2 = AFMS.getStepper(200,2); //Player 2 Nema17
 #define StepperSpeed 3500 //set stepper motors speed in RPM
 #define StepperAccel 10000 //set stepper motors acceleration in steps per second per second
 #define PaddleDist 75000 //movement target for left/right
+bool Stepper1IsMoving = false; //keeps track of whether the stepper motor is moving or stopped
+bool Stepper2IsMoving = false; //keeps track of whether the stepper motor is moving or stopped
 
-//Define Single Step Functions for AccelStepper Use
+//Define Step Functions for AccelStepper Use
 void forwardStepP1()
 {
   stepperMotor1->onestep(FORWARD,stepType);
@@ -44,11 +46,11 @@ void backwardStepP1()
 }
 void forwardStepP2()
 {
-  stepperMotor2->onestep(FORWARD,stepType);
+  stepperMotor2->quickstep(FORWARD);
 }
 void backwardStepP2()
 {
-  stepperMotor2->onestep(BACKWARD,stepType);
+  stepperMotor2->quickstep(BACKWARD);
 }
 
 //Define Stepper Motors as AccelStepper Objects
@@ -97,7 +99,7 @@ int P1SensorState = 0, P2SensorState = 0;
 
 unsigned long resetTimer = 0; // timestamp when was the score last triggered
 bool resetWaiting  = false; //used to make sure the timer is only set once when ball removed
-const long resetDelay = 5000; //how many milliseconds does the ball need to be taken out for before someone can score again
+const long resetDelay = 1500; //how many milliseconds does the ball need to be taken out for before someone can score again
 
 //Player Score Variables
 int Player1Score = 0, Player2Score = 0;
@@ -120,12 +122,11 @@ int DisplayScore = 0;
 void setup()
 {
   ///STEPPER MOTORS///
-  Serial.begin(19200); // set up Serial library at 19200 bps
+  Serial.begin(115200); // set up Serial library at 115200 bps
   Serial.println("Stepper test!");
   
   AFMS.begin();  // create with the default frequency 1.6KHz
-  Wire.setClock(400000L); //set speed of I2C bus, increases rate of polling to stepper sheild
-  TWBR = ((F_CPU /400000l) - 16) / 2; // Change the i2c clock to 400KHz
+  Wire.setClock(500000L); //set speed of I2C bus, increases rate of polling to stepper sheild
   
   Astepper1.setSpeed(StepperSpeed); //set stepper const speed on Motor1
   Astepper1.setMaxSpeed(StepperSpeed); //set max speed on Motor1
@@ -134,6 +135,12 @@ void setup()
   Astepper2.setSpeed(StepperSpeed); //set stepper const speed on Motor2
   Astepper2.setMaxSpeed(StepperSpeed); //set max speed on Motor2
   Astepper2.setAcceleration(StepperAccel); //set acceleration on Motor2
+  
+  //INIT PWM's on Motors to 100%
+  stepperMotor1->onestep(FORWARD,stepType);
+  stepperMotor1->release();
+  stepperMotor2->onestep(FORWARD,stepType);
+  stepperMotor2->release();
   
   ///JOYSTICKS///
   pinMode(Player1Up,INPUT_PULLUP);
@@ -166,13 +173,16 @@ void loop()
   //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
   if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
     Astepper1.moveTo(PaddleDist);
+    Stepper1IsMoving = true;
   } 
   else if (digitalRead(Player1Down) == LOW && digitalRead(Player1Up) == HIGH){
     Astepper1.moveTo(-PaddleDist);
+    Stepper1IsMoving = true;
   }
   else {
-    Astepper1.moveTo(Astepper1.currentPosition());
-    stepperMotor1->release(); //release motor when not moving to prevent over heating
+    if (Stepper1IsMoving){
+      brakeStepper(1);
+    }
   }
 
 
@@ -180,18 +190,26 @@ void loop()
   //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
   if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
     Astepper2.moveTo(PaddleDist);
+    Stepper2IsMoving = true;
   } 
   else if (digitalRead(Player2Down) == LOW && digitalRead(Player2Up) == HIGH){
     Astepper2.moveTo(-PaddleDist);
+    Stepper2IsMoving = true;
   }
   else {
-    Astepper2.moveTo(Astepper2.currentPosition());
-    stepperMotor2->release(); //release motor when not moving to prevent over heating
+    if (Stepper2IsMoving){
+      brakeStepper(2);
+    }
   }
 
   //RUN EVERY LOOP, commands stepper motors to update//
-  Astepper1.run();
-  Astepper2.run();
+  if (Stepper1IsMoving){
+    Astepper1.run();
+  }
+  if (Stepper2IsMoving){
+    Astepper2.run();
+  }
+  
   /******************************************************************/
   
   
@@ -223,6 +241,20 @@ void loop()
 /******************************************************************/
 /////CUSTOM FUNCTIONS/////
 /******************************************************************/
+void brakeStepper(int team)
+{
+  if (team == 1){
+    Astepper1.stop();
+    stepperMotor1->release(); //release motor when not moving to prevent over heating
+    Stepper1IsMoving = false;
+  }
+  else{
+    Astepper2.stop();
+    stepperMotor2->release(); //release motor when not moving to prevent over heating
+    Stepper2IsMoving = false;
+  }
+}
+
 void CheckScoring()
 {
   //check sensors states
