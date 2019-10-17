@@ -3,7 +3,7 @@
  Project     : FamiPong Domination  
  Author      : Jeffrey "Blackhart" Hepburn
  Description : Physical pong table for FamiLab's booth at MakerFaire Orlando 2019; paddles are driven by stepper motors on linear rails, scoring system run by IR break sensors.
- Libraries: -Adafruit Motor Shield V2 (https://github.com/adafruit/Adafruit_Motor_Shield_V2_Library); 
+ Libraries: -Adafruit Motor Shield V2 Performance Branch (https://github.com/IIIBlackhartIII/Adafruit_StepperV2_PerformanceBranch); 
             -AccelStepper (http://www.airspayce.com/mikem/arduino/AccelStepper/index.html);
             -Adafruit Neopixel (https://github.com/adafruit/Adafruit_NeoPixel);
 ******************************************************************/
@@ -11,8 +11,6 @@
 #include <AccelStepper.h>
 #include <Adafruit_MotorShield.h>
 #include <Adafruit_NeoPixel.h>
-
-#define DEBUG false
 
 
 ///STEPPER MOTORS///
@@ -57,9 +55,6 @@ void backwardStepP2()
 AccelStepper Astepper1(forwardStepP1, backwardStepP1); // use functions to step
 AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 
-// Motor check startup sequence variables
-bool BootSequenceTestRun = false;
-int MovementChecked = 0;
 /******************************************************************/
 
 ///JOYSTICKS///
@@ -101,7 +96,8 @@ bool canScore = true;
 int P1SensorState = 0, P2SensorState = 0;
 
 unsigned long resetTimer = 0; //when was the score last triggered
-#define resetDelay 5000 //how many milliseconds does the ball need to be taken out for before someone can score again)
+bool resetWaiting  = false; //used to make sure the timer is only set once when ball removed
+#define resetDelay 5000L //how many milliseconds does the ball need to be taken out for before someone can score again)
 
 //Player Score Variables
 int Player1Score = 0, Player2Score = 0;
@@ -110,7 +106,7 @@ int Player1Score = 0, Player2Score = 0;
 ///NEOPIXELS///
 /******************************************************************/
 #define LED_COUNT 60 //how many LEDs on strip
-#define brightness 0 //how bright the LED is
+#define LED_Brightness 50 //how bright the LED is
 #define fadeAmount 3 //how many points to fade the LED by
 #define Pixel_Pin 36 //NeoPixel strip data pin
 
@@ -128,20 +124,13 @@ void setup()
   Serial.println("Stepper test!");
   
   AFMS.begin();  // create with the default frequency 1.6KHz
-  Wire.setClock(400000); //set speed of I2C bus, increases rate of polling to stepper sheild
+  Wire.setClock(400000L); //set speed of I2C bus, increases rate of polling to stepper sheild
   
   Astepper1.setMaxSpeed(StepperSpeed); //set max speed on Motor1
   Astepper1.setAcceleration(StepperAccel); //set acceleration on Motor1
   
   Astepper2.setMaxSpeed(StepperSpeed); //set max speed on Motor2
   Astepper2.setAcceleration(StepperAccel); //set acceleration on Motor2
-  
-  //Prime test sequence
-  if (BootSequenceTestRun == false){
-    //Test Movement Distance
-    Astepper1.moveTo(600);
-    Astepper2.moveTo(600);
-  }
   
   ///JOYSTICKS///
   pinMode(Player1Up,INPUT_PULLUP);
@@ -158,11 +147,11 @@ void setup()
   digitalWrite(Player2SensorPin, HIGH); //turn on the pullup
   
   ///DISPLAYS///
-  pinMode(VoltDisplay,OUTPUT);
+  pinMode(VoltDisplay,OUTPUT); //set Voltmeter pin to ouput
   
   strip.begin(); //INIT Neopixel strip object
   strip.show(); //Turn off all pixels
-  strip.setBrightness(50);
+  strip.setBrightness(LED_Brightness); //set max brightness of Neopixel LEDs
 }
 
 
@@ -170,35 +159,29 @@ void loop()
 {
   ///MOTORS MOVEMENT///
   /******************************************************************/
-  if (BootSequenceTestRun == false){
-    TestMotorsMovement();
+  //Player1 Controller Input
+  //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
+  if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
+    Astepper1.moveTo(PaddleDist);
   } 
-  
-  if (BootSequenceTestRun == true){
-    //Player1 Controller Input
-    //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
-    if (digitalRead(Player1Up) == LOW && digitalRead(Player1Down) == HIGH){
-      Astepper1.moveTo(PaddleDist);
-    } 
-    else if (digitalRead(Player1Down) == LOW && digitalRead(Player1Up) == HIGH){
-      Astepper1.moveTo(-PaddleDist);
-    }
-    else {
-      Astepper1.moveTo(Astepper1.currentPosition());
-    }
+  else if (digitalRead(Player1Down) == LOW && digitalRead(Player1Up) == HIGH){
+    Astepper1.moveTo(-PaddleDist);
+  }
+  else {
+    Astepper1.moveTo(Astepper1.currentPosition());
+  }
 
 
-    //Player2 Controller Input
-    //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
-    if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
-      Astepper2.moveTo(PaddleDist);
-    } 
-    else if (digitalRead(Player2Down) == LOW && digitalRead(Player2Up) == HIGH){
-      Astepper2.moveTo(-PaddleDist);
-    }
-    else {
-      Astepper2.moveTo(Astepper2.currentPosition());
-    }
+  //Player2 Controller Input
+  //If only 1 direction is triggered, move that direction, if both released or both depressed, stop moving
+  if (digitalRead(Player2Up) == LOW && digitalRead(Player2Down) == HIGH){
+    Astepper2.moveTo(PaddleDist);
+  } 
+  else if (digitalRead(Player2Down) == LOW && digitalRead(Player2Up) == HIGH){
+    Astepper2.moveTo(-PaddleDist);
+  }
+  else {
+    Astepper2.moveTo(Astepper2.currentPosition());
   }
 
   //RUN EVERY LOOP, commands stepper motors to update//
@@ -261,15 +244,18 @@ void CheckScoring()
   
   //once ball is removed, scoring is still locked. Set the reset timer to delay scoring
   if (P1SensorState == HIGH && P2SensorState == HIGH && canScore == false){
-    resetTimer = millis();
+    if (resetWaiting == false){
+      resetTimer = millis();
+      resetWaiting = true;
+    }
   }
   
   //once the current time is greater than the resetTime + the delay (how many seconds before its fair to score again) unlock scoring again
   if (millis() > resetTimer + resetDelay){
     canScore = true; //allow scoring again
-    
+    resetWaiting = false; //allow reset timer to be set next time
     strip.clear(); //reset neopixels
-    strip.show(); 
+    strip.show(); //show cleared pixels
   }
 }
 
@@ -332,19 +318,5 @@ void VictoryDisplay (int team)
       strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
     }
     strip.show(); // Update strip with new contents
-  }
-}
-
-void TestMotorsMovement()
-{
-  if(Astepper1.distanceToGo() <= 0)
-    Astepper1.moveTo(-Astepper1.currentPosition());
-    MovementChecked += 1;
-  if(Astepper2.distanceToGo() <= 0)
-    Astepper2.moveTo(-Astepper2.currentPosition());
-    MovementChecked += 1;
-    
-  if (MovementChecked >= 4){
-    BootSequenceTestRun = true;
   }
 }
