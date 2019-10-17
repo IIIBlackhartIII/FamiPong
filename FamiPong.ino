@@ -261,19 +261,20 @@ void CheckScoring()
   P2SensorState = digitalRead(Player2SensorPin);
   
   //check if a player scored, and can score
+  //sensor of P1 gives P2 points, because P2 got the ball past P1's paddle, and vice versa
   if (P1SensorState == LOW && canScore == true){
-    Player1Score += 1;
-    Serial.println("Player 1 Scored!");
-    Serial.println("Player 1's Score is now: " + Player1Score);
-    ScorePointDisplay(1);
-    
-    canScore = false;
-  }
-  else if (P2SensorState == LOW && canScore == true){
     Player2Score += 1;
     Serial.println("Player 2 Scored!");
     Serial.println("Player 2's Score is now: " + Player2Score);
     ScorePointDisplay(2);
+    
+    canScore = false;
+  }
+  else if (P2SensorState == LOW && canScore == true){
+    Player1Score += 1;
+    Serial.println("Player 1 Scored!");
+    Serial.println("Player 1's Score is now: " + Player1Score);
+    ScorePointDisplay(1);
     
     canScore = false;
   }
