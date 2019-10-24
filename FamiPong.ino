@@ -67,17 +67,18 @@ AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 //On our version of the joystick this is colour coded Red,Orange,Yellow,Green,Black
 
 //With our Joysticks mounted sideways, Left/Right will translate to Up/Down
+//Green Joystick is P1, Blue Joystick is P2
 
 //Digital Pins
-#define Player1Up 22  //Player 1 UP (Yellow) 
-#define Player1Down 23  //Player 1 DOWN (Green)
-#define Player1Left 24  //Player 1 LEFT (Red)  
-#define Player1Right 25  //Player 1 RIGHT (Orange) 
+#define Player2Up 22  //Player 1 UP (Yellow) 
+#define Player2Down 23  //Player 1 DOWN (Green)
+#define Player2Left 24  //Player 1 LEFT (Red)  
+#define Player2Right 25  //Player 1 RIGHT (Orange) 
 
-#define Player2Up 52  //Player 2 UP (Yellow) 
-#define Player2Down 53  //Player 2 DOWN (Green)
-#define Player2Left 50  //Player 2 LEFT (Red)  
-#define Player2Right 51  //Player 2 RIGHT (Orange) 
+#define Player1Up 52  //Player 2 UP (Yellow) 
+#define Player1Down 53  //Player 2 DOWN (Green)
+#define Player1Left 50  //Player 2 LEFT (Red)  
+#define Player1Right 51  //Player 2 RIGHT (Orange) 
 
 /******************************************************************/
 
@@ -89,8 +90,8 @@ AccelStepper Astepper2(forwardStepP2, backwardStepP2); // use functions to step
 //Break Beams are mounted at the end of the board, after the solenoid rails, and are used to detect the ball falling into the trough
 
 //Digital Pins
-#define Player1SensorPin 26 //Player 1 Break Beam 
-#define Player2SensorPin 48 //Player 2 Break Beam
+#define Player2SensorPin 26 //Player 1 Break Beam 
+#define Player1SensorPin 48 //Player 2 Break Beam
 
 //Scoring State Variables
 bool canScore = true;
@@ -117,7 +118,6 @@ Adafruit_NeoPixel strip(LED_COUNT, Pixel_Pin, NEO_GRB + NEO_KHZ800); //declare s
 
 #define VoltDisplay 45 //define PWM pin for the Voltmeter
 int DisplayScore = 0;
-
 
 void setup()
 {
